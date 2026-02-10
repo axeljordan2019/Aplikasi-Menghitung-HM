@@ -1,0 +1,695 @@
+// Data storage - DIKOSONGKAN
+let mesinData = {
+    press: {
+        1: { nama: "Press #1", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        2: { nama: "Press #2", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        3: { nama: "Press #3", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        4: { nama: "Press #4", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" }
+    },
+    digester: {
+        1: { nama: "Digester #1", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        2: { nama: "Digester #2", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        3: { nama: "Digester #3", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        4: { nama: "Digester #4", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" }
+    },
+    sludge: {
+        3: { nama: "Sludge #3", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        4: { nama: "Sludge #4", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        5: { nama: "Sludge #5", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        6: { nama: "Sludge #6", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        7: { nama: "Sludge #7", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        8: { nama: "Sludge #8", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" }
+    },
+    ripple: {
+        1: { nama: "Ripple Mill #1", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        2: { nama: "Ripple Mill #2", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" },
+        3: { nama: "Ripple Mill #3", hmAwal: 0, hmAkhir: 0, totalHM: 0, status: "normal" }
+    }
+};
+
+let historyData = [];
+let selectedMachine = null;
+let selectedType = null;
+let selectedNumber = null;
+let selectedStatus = "normal";
+
+// Spare part data - DIKOSONGKAN
+let sparePartData = {
+    press: [
+        { name: "Bearing Screw Press", lifetime: 1000, used: 0 },
+        { name: "Screen Plate", lifetime: 2000, used: 0 },
+        { name: "Hydraulic Pump", lifetime: 1500, used: 0 }
+    ],
+    digester: [
+        { name: "Paddle Arm", lifetime: 800, used: 0 },
+        { name: "Heating Coil", lifetime: 1200, used: 0 },
+        { name: "Gear Box", lifetime: 2000, used: 0 }
+    ],
+    sludge: [
+        { name: "Bowl Assembly", lifetime: 500, used: 0 },
+        { name: "Drive Belt", lifetime: 300, used: 0 },
+        { name: "Bearing Set", lifetime: 400, used: 0 }
+    ],
+    ripple: [
+        { name: "Hammer Plate", lifetime: 600, used: 0 },
+        { name: "Screen Plate", lifetime: 800, used: 0 },
+        { name: "Rotor Assembly", lifetime: 1000, used: 0 }
+    ]
+};
+
+// Initialize
+function initApp() {
+    // Set current date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('operasiDate').value = today;
+    
+    // Load summary table
+    loadSummaryTable();
+    
+    // Load history
+    loadHistory();
+    
+    // Load spare part table
+    loadSparePartTable();
+    
+    // Calculate totals
+    updateTotals();
+    
+    // Setup Enter key events
+    setupEnterKeyEvents();
+}
+
+// Setup Enter Key Events
+function setupEnterKeyEvents() {
+    // Input field Enter key handlers
+    document.getElementById('hmAwal').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('hmAkhir').focus();
+        }
+    });
+    
+    document.getElementById('hmAkhir').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            hitungHM();
+        }
+    });
+    
+    document.getElementById('hmNotes').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            simpanData();
+        }
+    });
+    
+    // Spare part modal Enter key handlers
+    document.getElementById('editPartName').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('editLifetime').focus();
+        }
+    });
+    
+    document.getElementById('editLifetime').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('editUsed').focus();
+        }
+    });
+    
+    document.getElementById('editUsed').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveSparePart();
+        }
+    });
+}
+
+// Switch Tabs
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName).classList.add('active');
+    
+    // Activate clicked button
+    event.currentTarget.classList.add('active');
+    
+    // Update report number based on date
+    if (tabName === 'report') {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        document.getElementById('reportNo').value = `HM/PKS/${year}/${month}/001`;
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Remove existing notification
+    const existing = document.querySelector('.notification');
+    if (existing) existing.remove();
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'danger' ? 'times-circle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }
+    }, 3000);
+}
+
+// Select Status
+function selectStatus(status) {
+    selectedStatus = status;
+    
+    // Remove active class from all status buttons
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to selected button
+    event.currentTarget.classList.add('active');
+    
+    showNotification(`Status mesin diatur ke: ${status.toUpperCase()}`, 'info');
+}
+
+// Select Machine
+function selectMachine(type, number) {
+    // Remove active class from all buttons
+    document.querySelectorAll('.machine-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.remove('warning');
+        btn.classList.remove('danger');
+    });
+    
+    // Add active class to selected button
+    event.currentTarget.classList.add('active');
+    
+    // Set selected machine
+    selectedType = type;
+    selectedNumber = number;
+    selectedMachine = mesinData[type][number];
+    
+    // Update machine label
+    document.getElementById('selectedMachine').value = selectedMachine.nama;
+    document.getElementById('machineLabel').innerHTML = `<i class="fas fa-industry"></i> ${selectedMachine.nama}`;
+    
+    // Update input fields with last values
+    document.getElementById('hmAwal').value = selectedMachine.hmAkhir > 0 ? selectedMachine.hmAkhir.toFixed(2) : '';
+    document.getElementById('hmAkhir').value = '';
+    document.getElementById('hmAkhir').focus();
+    
+    // Set status based on machine status
+    selectStatus(selectedMachine.status);
+    updateStatusButtons(selectedMachine.status);
+    
+    // Reset results
+    document.getElementById('resultSelisih').innerHTML = `0.00<span class="result-unit"> jam</span>`;
+    
+    showNotification(`Mesin ${selectedMachine.nama} dipilih`, 'info');
+}
+
+// Update status buttons
+function updateStatusButtons(status) {
+    // Remove active class from all status buttons
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to current status
+    document.querySelector(`.status-btn.${status}`).classList.add('active');
+    selectedStatus = status;
+}
+
+// Calculate HM
+function hitungHM() {
+    if (!selectedMachine) {
+        showNotification('Pilih mesin terlebih dahulu!', 'warning');
+        return;
+    }
+    
+    const hmAwal = parseFloat(document.getElementById('hmAwal').value) || 0;
+    const hmAkhir = parseFloat(document.getElementById('hmAkhir').value) || 0;
+    
+    if (hmAwal === 0 || hmAkhir === 0) {
+        showNotification('Harap isi HM Awal dan HM Akhir!', 'warning');
+        return;
+    }
+    
+    if (hmAkhir <= hmAwal) {
+        showNotification('HM Akhir harus lebih besar dari HM Awal!', 'warning');
+        return;
+    }
+    
+    // Calculate difference
+    const selisih = hmAkhir - hmAwal;
+    
+    // Update result display
+    document.getElementById('resultSelisih').innerHTML = `${selisih.toFixed(2)}<span class="result-unit"> jam</span>`;
+    
+    showNotification(`HM dihitung: ${selisih.toFixed(2)} jam`, 'success');
+    
+    // Auto focus to notes field
+    document.getElementById('hmNotes').focus();
+}
+
+// Hitung Semua Mesin
+function hitungSemua() {
+    if (!confirm('Hitung semua mesin secara otomatis?')) return;
+    
+    // Calculate for all machines
+    let totalSelisih = 0;
+    let mesinDihitung = 0;
+    
+    Object.keys(mesinData).forEach(type => {
+        const machines = mesinData[type];
+        Object.keys(machines).forEach(number => {
+            const machine = machines[number];
+            if (machine.hmAkhir > 0 && machine.hmAwal > 0) {
+                const selisih = machine.hmAkhir - machine.hmAwal;
+                if (selisih > 0) {
+                    machine.totalHM += selisih;
+                    totalSelisih += selisih;
+                    mesinDihitung++;
+                }
+            }
+        });
+    });
+    
+    // Update summary table
+    loadSummaryTable();
+    
+    // Update totals
+    updateTotals();
+    
+    if (mesinDihitung > 0) {
+        showNotification(`Berhasil menghitung ${mesinDihitung} mesin. Total HM: ${totalSelisih.toFixed(2)} jam`, 'success');
+    } else {
+        showNotification('Tidak ada data HM yang valid untuk dihitung', 'warning');
+    }
+}
+
+// Save Data
+function simpanData() {
+    if (!selectedMachine) {
+        showNotification('Pilih mesin terlebih dahulu!', 'warning');
+        return;
+    }
+    
+    const hmAwal = parseFloat(document.getElementById('hmAwal').value) || 0;
+    const hmAkhir = parseFloat(document.getElementById('hmAkhir').value) || 0;
+    const tanggal = document.getElementById('operasiDate').value;
+    const notes = document.getElementById('hmNotes').value;
+    
+    if (hmAwal === 0 || hmAkhir === 0) {
+        showNotification('Harap isi HM Awal dan HM Akhir!', 'warning');
+        return;
+    }
+    
+    if (!tanggal) {
+        showNotification('Harap isi tanggal operasi!', 'warning');
+        return;
+    }
+    
+    if (hmAkhir <= hmAwal) {
+        showNotification('HM Akhir harus lebih besar dari HM Awal!', 'warning');
+        return;
+    }
+    
+    const selisih = hmAkhir - hmAwal;
+    
+    // Create record
+    const record = {
+        id: Date.now(),
+        tanggal: tanggal,
+        machineType: selectedType,
+        machineNumber: selectedNumber,
+        machineName: selectedMachine.nama,
+        hmAwal: hmAwal,
+        hmAkhir: hmAkhir,
+        selisih: selisih,
+        totalHM: selectedMachine.totalHM + selisih,
+        status: selectedStatus,
+        notes: notes,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Add to history
+    historyData.unshift(record);
+    
+    // Update machine data
+    mesinData[selectedType][selectedNumber].hmAwal = hmAwal;
+    mesinData[selectedType][selectedNumber].hmAkhir = hmAkhir;
+    mesinData[selectedType][selectedNumber].totalHM += selisih;
+    mesinData[selectedType][selectedNumber].status = selectedStatus;
+    
+    // Update spare part usage
+    updateSparePartUsage(selectedType, selisih);
+    
+    showNotification(`Data ${selectedMachine.nama} berhasil disimpan!`, 'success');
+    
+    // Reload tables
+    loadSummaryTable();
+    loadHistory();
+    loadSparePartTable();
+    updateTotals();
+    
+    // Reset form
+    document.getElementById('hmAkhir').value = '';
+    document.getElementById('hmNotes').value = '';
+    document.getElementById('resultSelisih').innerHTML = `0.00<span class="result-unit"> jam</span>`;
+    
+    // Auto focus to HM Awal for next input
+    document.getElementById('hmAwal').focus();
+}
+
+// Update Spare Part Usage
+function updateSparePartUsage(type, hours) {
+    if (sparePartData[type]) {
+        sparePartData[type].forEach(part => {
+            part.used += hours;
+            if (part.used > part.lifetime) {
+                part.used = part.lifetime;
+            }
+        });
+    }
+}
+
+// Load Summary Table
+function loadSummaryTable() {
+    const tableBody = document.getElementById('summaryTable').querySelector('tbody');
+    tableBody.innerHTML = '';
+    
+    let counter = 1;
+    let activeMachines = 0;
+    
+    // Loop through all machine types
+    Object.keys(mesinData).forEach(type => {
+        const machines = mesinData[type];
+        Object.keys(machines).forEach(number => {
+            const machine = machines[number];
+            
+            // Check if machine has data
+            const hasData = machine.totalHM > 0 || machine.hmAkhir > 0;
+            if (!hasData) {
+                return; // Skip machines with no data
+            }
+            
+            activeMachines++;
+            
+            let statusBadge = '';
+            if (machine.status === 'normal') {
+                statusBadge = '<span style="background: #4CAF50; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">NORMAL</span>';
+            } else if (machine.status === 'warning') {
+                statusBadge = '<span style="background: #FF9800; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">WARNING</span>';
+            } else {
+                statusBadge = '<span style="background: #F44336; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">CRITICAL</span>';
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${counter}</td>
+                <td><strong>${getMachineTypeName(type)}</strong></td>
+                <td>${machine.nama}</td>
+                <td>${machine.hmAkhir > 0 ? machine.hmAkhir.toFixed(2) : '0.00'}</td>
+                <td><span style="color: var(--success); font-weight: 700;">${machine.totalHM.toFixed(2)}</span></td>
+                <td>${statusBadge}</td>
+            `;
+            
+            tableBody.appendChild(row);
+            counter++;
+        });
+    });
+    
+    if (activeMachines === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="6" style="text-align: center; padding: 30px; color: #999;">
+                <i class="fas fa-industry" style="font-size: 24px; display: block; margin-bottom: 10px;"></i>
+                Belum ada data mesin. Silakan input data terlebih dahulu.
+            </td>
+        `;
+        tableBody.appendChild(row);
+    }
+    
+    document.getElementById('totalMesin').textContent = activeMachines;
+    document.getElementById('totalMesinBadge').innerHTML = `<i class="fas fa-server"></i> ${activeMachines} Mesin`;
+    document.getElementById('resultMesin').innerHTML = `${activeMachines}<span class="result-unit"> unit</span>`;
+}
+
+// Get Machine Type Name
+function getMachineTypeName(type) {
+    const names = {
+        press: 'MESIN PRESS',
+        digester: 'DIGESTER',
+        sludge: 'SLUDGE CENTRIFUGE',
+        ripple: 'RIPPLE MILL'
+    };
+    return names[type] || type;
+}
+
+// Get Machine Type Display Name
+function getMachineDisplayName(type) {
+    const names = {
+        press: 'Mesin Press',
+        digester: 'Digester',
+        sludge: 'Sludge Centrifuge',
+        ripple: 'Ripple Mill'
+    };
+    return names[type] || type;
+}
+
+// Update Totals
+function updateTotals() {
+    let totalHariIni = 0;
+    let totalCumulative = 0;
+    let activeMachines = 0;
+    
+    // Calculate totals from history for today
+    const today = new Date().toISOString().split('T')[0];
+    historyData.forEach(record => {
+        if (record.tanggal === today) {
+            totalHariIni += record.selisih;
+        }
+    });
+    
+    // Calculate total cumulative HM and count active machines
+    Object.keys(mesinData).forEach(type => {
+        const machines = mesinData[type];
+        Object.keys(machines).forEach(number => {
+            totalCumulative += machines[number].totalHM;
+            if (machines[number].totalHM > 0 || machines[number].hmAkhir > 0) {
+                activeMachines++;
+            }
+        });
+    });
+    
+    // Update displays
+    document.getElementById('totalHariIni').textContent = totalHariIni.toFixed(2);
+    document.getElementById('totalCumulative').textContent = totalCumulative.toFixed(2);
+    document.getElementById('resultHariIni').innerHTML = `${totalHariIni.toFixed(2)}<span class="result-unit"> jam</span>`;
+    document.getElementById('resultTotal').innerHTML = `${totalCumulative.toFixed(2)}<span class="result-unit"> jam</span>`;
+    document.getElementById('resultMesin').innerHTML = `${activeMachines}<span class="result-unit"> unit</span>`;
+    document.getElementById('totalMesin').textContent = activeMachines;
+    document.getElementById('totalMesinBadge').innerHTML = `<i class="fas fa-server"></i> ${activeMachines} Mesin`;
+}
+
+// Load History
+function loadHistory() {
+    const tableBody = document.getElementById('historyTable').querySelector('tbody');
+    tableBody.innerHTML = '';
+    
+    if (historyData.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="9" style="text-align: center; padding: 30px; color: #999;">
+                <i class="fas fa-history" style="font-size: 24px; display: block; margin-bottom: 10px;"></i>
+                Belum ada data riwayat
+            </td>
+        `;
+        tableBody.appendChild(row);
+        return;
+    }
+    
+    historyData.slice(0, 50).forEach(record => {
+        const row = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (record.status === 'normal') {
+            statusBadge = '<span style="background: #4CAF50; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px;">NORMAL</span>';
+        } else if (record.status === 'warning') {
+            statusBadge = '<span style="background: #FF9800; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px;">WARNING</span>';
+        } else {
+            statusBadge = '<span style="background: #F44336; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px;">CRITICAL</span>';
+        }
+        
+        row.innerHTML = `
+            <td>${formatDate(record.tanggal)}</td>
+            <td>${record.machineName}</td>
+            <td>${record.hmAwal.toFixed(2)}</td>
+            <td>${record.hmAkhir.toFixed(2)}</td>
+            <td><strong style="color: var(--primary);">${record.selisih.toFixed(2)}</strong></td>
+            <td><strong style="color: var(--success);">${record.totalHM.toFixed(2)}</strong></td>
+            <td>${statusBadge}</td>
+            <td>${record.notes || '-'}</td>
+            <td>
+                <button onclick="deleteHistory(${record.id})" style="background: #FFEBEE; color: #F44336; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+// Filter History
+function filterHistory() {
+    const filterMachine = document.getElementById('filterMachine').value;
+    const filterDate = document.getElementById('filterDate').value;
+    const tableBody = document.getElementById('historyTable').querySelector('tbody');
+    tableBody.innerHTML = '';
+    
+    let filteredData = historyData;
+    
+    if (filterMachine !== 'all') {
+        filteredData = filteredData.filter(record => record.machineType === filterMachine);
+    }
+    
+    if (filterDate) {
+        filteredData = filteredData.filter(record => record.tanggal === filterDate);
+    }
+    
+    if (filteredData.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="9" style="text-align: center; padding: 30px; color: #999;">
+                <i class="fas fa-search" style="font-size: 24px; display: block; margin-bottom: 10px;"></i>
+                Tidak ada data untuk filter yang dipilih
+            </td>
+        `;
+        tableBody.appendChild(row);
+        return;
+    }
+    
+    filteredData.slice(0, 50).forEach(record => {
+        const row = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (record.status === 'normal') {
+            statusBadge = '<span style="background: #4CAF50; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px;">NORMAL</span>';
+        } else if (record.status === 'warning') {
+            statusBadge = '<span style="background: #FF9800; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px;">WARNING</span>';
+        } else {
+            statusBadge = '<span style="background: #F44336; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px;">CRITICAL</span>';
+        }
+        
+        row.innerHTML = `
+            <td>${formatDate(record.tanggal)}</td>
+            <td>${record.machineName}</td>
+            <td>${record.hmAwal.toFixed(2)}</td>
+            <td>${record.hmAkhir.toFixed(2)}</td>
+            <td><strong style="color: var(--primary);">${record.selisih.toFixed(2)}</strong></td>
+            <td><strong style="color: var(--success);">${record.totalHM.toFixed(2)}</strong></td>
+            <td>${statusBadge}</td>
+            <td>${record.notes || '-'}</td>
+            <td>
+                <button onclick="deleteHistory(${record.id})" style="background: #FFEBEE; color: #F44336; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+// Delete History
+function deleteHistory(recordId) {
+    if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) return;
+    
+    const index = historyData.findIndex(r => r.id === recordId);
+    if (index !== -1) {
+        const record = historyData[index];
+        
+        // Subtract from machine total
+        if (mesinData[record.machineType] && mesinData[record.machineType][record.machineNumber]) {
+            mesinData[record.machineType][record.machineNumber].totalHM -= record.selisih;
+        }
+        
+        // Subtract from spare part usage
+        if (sparePartData[record.machineType]) {
+            sparePartData[record.machineType].forEach(part => {
+                part.used -= record.selisih;
+                if (part.used < 0) part.used = 0;
+            });
+        }
+        
+        historyData.splice(index, 1);
+        
+        showNotification('Data riwayat berhasil dihapus!', 'success');
+        loadHistory();
+        loadSummaryTable();
+        loadSparePartTable();
+        updateTotals();
+    }
+}
+
+// Load Spare Part Table
+function loadSparePartTable() {
+    const tableBody = document.getElementById('sparePartTable').querySelector('tbody');
+    tableBody.innerHTML = '';
+    
+    let counter = 1;
+    let hasData = false;
+    
+    // Process each machine type
+    Object.keys(sparePartData).forEach((type) => {
+        sparePartData[type].forEach((part, partIndex) => {
+            hasData = true;
+            const remaining = part.lifetime - part.used;
+            
+            let status = "NORMAL";
+            let statusColor = "#4CAF50";
+            let recommendation = "Normal";
+            
+            if (remaining <= 0) {
+                status = "REPLACE NOW";
+                statusColor = "#F44336";
+                recommendation = "SEGERA GANTI!";
+            } else if (remaining < 50) {
+                status = "CRITICAL";
+                statusColor = "#F44336";
+                recommendation = "SEGERA GANTI!";
+            } else if (remaining < 200) {
+                status = "WARNING";
+                statusColor = "#FF9800";
+                recommendation = `Ganti dalam ${Math.ceil(remaining)} HM`;
+            } else if (remaining < 500) {
+                recommendation = `Monitor, sisa ${Math.ceil(remaining)} HM`;
+            }
